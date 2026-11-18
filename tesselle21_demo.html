@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TESSELLE - prototype mobile</title>
+<style>
+  :root{
+    --ink:#14171F;
+    --panel:#1C2129;
+    --panel-2:#232936;
+    --cream:#EDE7D8;
+    --cream-dim:#ABA695;
+    --gold:#E3A94C;
+    --hot:#F2D16B;
+    --danger:#D45A5A;
+    --line:#333B4A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--ink);color:var(--cream);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex;justify-content:center;
+    overscroll-behavior:none;touch-action:pan-y;
+    user-select:none;-webkit-user-select:none;
+  }
+  .app{width:100%;max-width:440px;min-height:100%;display:flex;flex-direction:column;padding:14px 14px 10px;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+  .brand{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:1.3rem;letter-spacing:.22em;font-weight:600;}
+  .brand span{color:var(--gold);}
+  .hright{display:flex;align-items:center;gap:10px;}
+  .case-label{font-size:.76rem;color:var(--cream-dim);letter-spacing:.06em;}
+  .menu-btn{background:none;border:1px solid var(--line);color:var(--cream-dim);border-radius:8px;padding:3px 9px;font-size:.72rem;cursor:pointer;}
+  .statusbar{display:flex;align-items:center;justify-content:space-between;margin:8px 0 6px;font-size:.8rem;color:var(--cream-dim);}
+  .score{font-variant-numeric:tabular-nums;}
+  .score b{color:var(--cream);font-size:.95rem;}
+  .score .mult{color:var(--hot);font-weight:800;margin-left:6px;}
+  .hearts{display:flex;gap:6px;}
+  .heart{width:10px;height:10px;border-radius:50%;background:var(--danger);transition:opacity .25s,transform .25s;}
+  .heart.lost{opacity:.18;transform:scale(.7);}
+  .combo-track{height:5px;background:var(--panel-2);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+  .combo-fill{height:100%;width:0%;background:var(--gold);border-radius:3px;}
+  .combo-fill.fever{background:var(--hot);box-shadow:0 0 8px var(--hot);}
+  .board-wrap{position:relative;width:100%;}
+  canvas{display:block;width:100%;height:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;touch-action:none;}
+  canvas.fever{border-color:var(--hot);box-shadow:0 0 18px rgba(242,209,107,.35);}
+  footer{margin-top:9px;text-align:center;font-size:.72rem;color:var(--cream-dim);line-height:1.5;min-height:2.2em;}
+  footer b{color:var(--cream);font-weight:600;}
+  .overlay{
+    position:absolute;inset:0;border-radius:16px;background:rgba(13,16,22,.86);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    opacity:0;pointer-events:none;transition:opacity .3s;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:18px;max-width:338px;width:100%;text-align:center;max-height:95%;overflow:auto;}
+  .card.wide{max-width:370px;}
+  .card h2{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:1.4rem;font-weight:600;margin-bottom:10px;}
+  .card h3{font-size:.8rem;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 8px;text-align:left;}
+  .card h2.gold{color:var(--gold);}
+  .card p{font-size:.85rem;line-height:1.55;color:var(--cream-dim);margin-bottom:14px;}
+  .card p b{color:var(--cream);}
+  .btn{
+    display:block;width:100%;background:var(--gold);color:#1a1608;border:none;
+    font-size:.93rem;font-weight:700;padding:12px 22px;border-radius:999px;
+    cursor:pointer;letter-spacing:.03em;margin-top:9px;
+  }
+  .btn.ghost{background:none;color:var(--cream);border:1px solid var(--line);font-weight:600;}
+  .btn.slim{padding:9px 14px;font-size:.82rem;margin-top:7px;}
+  .btn:focus-visible{outline:2px solid var(--cream);outline-offset:2px;}
+  .btn small{display:block;font-weight:500;font-size:.7rem;opacity:.75;margin-top:2px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .brand-mark{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:2rem;letter-spacing:.24em;margin-bottom:5px;}
+  .brand-mark span{color:var(--gold);}
+  .mode-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);border-radius:8px;padding:11px 12px;margin-top:8px;background:#202633;}
+  .mode-row strong{display:block;font-size:.92rem;color:var(--cream);}
+  .mode-row small{display:block;color:var(--cream-dim);font-size:.7rem;line-height:1.35;margin-top:2px;}
+  .mode-row button{width:auto;margin:0;padding:8px 13px;border-radius:999px;}
+  .level-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 12px;}
+  .chapter-label{grid-column:1/-1;text-align:left;color:var(--gold);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-top:7px;}
+  .level-tile{min-height:48px;border:1px solid var(--line);border-radius:8px;background:#202633;color:var(--cream);font-weight:800;cursor:pointer;}
+  .level-tile small{display:block;font-size:.65rem;color:var(--hot);font-weight:700;margin-top:2px;}
+  .level-tile.locked{opacity:.35;cursor:default;}
+  .level-tile.current{border-color:var(--gold);box-shadow:0 0 0 1px rgba(227,169,76,.45) inset;}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border-top:1px solid var(--line);padding:11px 0;font-size:.86rem;}
+  .toggle{width:46px;height:26px;border-radius:999px;border:1px solid var(--line);background:#151922;padding:3px;cursor:pointer;}
+  .toggle::before{content:"";display:block;width:18px;height:18px;border-radius:50%;background:var(--cream-dim);transition:transform .2s,background .2s;}
+  .toggle.on::before{transform:translateX(18px);background:var(--gold);}
+  .stars{font-size:1.7rem;letter-spacing:.15em;margin-bottom:8px;color:var(--hot);}
+  .stars .off{opacity:.22;}
+  .stat-line{font-size:.8rem;color:var(--cream-dim);margin-bottom:12px;}
+  .stat-line b{color:var(--gold);}
+  .page{display:none;width:100%;min-height:100%;flex:1;}
+  .page.active{display:flex;flex-direction:column;}
+  .home-page,.map-page,.panel-page{padding:18px 4px 10px;}
+  .home-top{padding-top:18px;text-align:center;}
+  .home-logo{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:2.35rem;letter-spacing:.24em;margin:10px 0 8px;}
+  .home-logo span{color:var(--gold);}
+  .home-sub{max-width:310px;margin:0 auto 20px;color:var(--cream-dim);font-size:.9rem;line-height:1.5;}
+  .home-actions{margin-top:auto;padding-bottom:12px;}
+  .page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .page-title{text-align:left;}
+  .page-title h1{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:1.55rem;font-weight:600;}
+  .page-title p{font-size:.78rem;color:var(--cream-dim);line-height:1.4;margin-top:3px;}
+  .back-btn{width:auto;margin:0;padding:8px 12px;border-radius:8px;}
+  .map-scroll{overflow:auto;padding-bottom:16px;}
+  .chapter-band{border:1px solid var(--line);border-radius:8px;background:#1a1f29;margin-bottom:10px;padding:10px;}
+  .chapter-band.locked{opacity:.58;}
+  .chapter-band-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;text-align:left;}
+  .chapter-band h2{font-size:.92rem;color:var(--gold);letter-spacing:.04em;}
+  .chapter-band p{font-size:.72rem;color:var(--cream-dim);line-height:1.35;margin-top:2px;}
+  .chapter-progress{font-size:.72rem;color:var(--hot);white-space:nowrap;}
+  .chapter-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+  .game-page{display:none;}
+  .game-page.active{display:flex;}
+  @media (prefers-reduced-motion: reduce){.overlay{transition:none;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="page home-page active" id="homePage">
+    <div class="home-top">
+      <div class="home-logo">TESS<span>E</span>LLE</div>
+      <p class="home-sub">Tracez des pieces d'un seul trait, remplissez la forme, puis gardez le rythme pour viser les etoiles.</p>
+    </div>
+    <div class="home-actions">
+      <button class="btn" id="continueBtn">Continuer<small id="continueHint">Aventure 1</small></button>
+      <div class="mode-row">
+        <div><strong>Aventure</strong><small>Campagne, tutos et paliers de difficulte.</small></div>
+        <button class="btn slim" id="mapBtn">Carte</button>
+      </div>
+      <div class="mode-row">
+        <div><strong>Infini</strong><small>Manches generees, score de serie.</small></div>
+        <button class="btn slim ghost" id="infBtn">Lancer</button>
+      </div>
+      <div class="mode-row">
+        <div><strong>Expert</strong><small>Solution unique, aucune devinette.</small></div>
+        <button class="btn slim ghost" id="expertMapBtn">Carte</button>
+      </div>
+      <div class="split">
+        <button class="btn ghost slim" id="statsBtn">Stats</button>
+        <button class="btn ghost slim" id="settingsBtn">Reglages</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="page map-page" id="advPage">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>Aventure</h1>
+        <p>Les paliers introduisent une seule idee a la fois, puis la retirent.</p>
+      </div>
+      <button class="btn ghost back-btn" id="advBackBtn">Retour</button>
+    </div>
+    <div class="map-scroll" id="advGrid"></div>
+  </section>
+
+  <section class="page map-page" id="expertPage">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>Expert</h1>
+        <p>Des niveaux a solution unique, avec aide logique progressive.</p>
+      </div>
+      <button class="btn ghost back-btn" id="expertBackBtn">Retour</button>
+    </div>
+    <div class="map-scroll" id="expertGrid"></div>
+  </section>
+
+  <section class="page panel-page" id="statsPage">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>Stats</h1>
+        <p>Progression locale sur cet appareil.</p>
+      </div>
+      <button class="btn ghost back-btn" id="statsBackBtn">Retour</button>
+    </div>
+    <div class="card wide"><p id="statsText"></p></div>
+  </section>
+
+  <section class="page panel-page" id="settingsPage">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>Reglages</h1>
+        <p>Confort de jeu.</p>
+      </div>
+      <button class="btn ghost back-btn" id="settingsBackBtn">Retour</button>
+    </div>
+    <div class="card wide">
+      <div class="setting-row"><span>Audio</span><button class="toggle on" id="soundToggle" aria-label="Audio"></button></div>
+      <div class="setting-row"><span>Vibrations visuelles</span><button class="toggle on" id="motionToggle" aria-label="Vibrations visuelles"></button></div>
+    </div>
+  </section>
+
+  <section class="page game-page" id="gamePage">
+  <header>
+    <div class="brand">TESS<span>E</span>LLE</div>
+    <div class="hright">
+      <div class="case-label" id="caseLabel"></div>
+      <button class="menu-btn" id="menuBtn">Menu</button>
+    </div>
+  </header>
+  <div class="statusbar">
+    <div class="score" id="scoreBox"><b>0</b><span class="mult" id="multBox"></span></div>
+    <div class="hearts" id="hearts"></div>
+  </div>
+  <div class="combo-track"><div class="combo-fill" id="comboFill"></div></div>
+
+  <div class="board-wrap">
+    <canvas id="board" width="360" height="410" aria-label="Plateau de jeu"></canvas>
+
+    <div class="overlay show" id="menuOv">
+    </div>
+
+    <div class="overlay" id="pauseOv">
+      <div class="card">
+        <h2>Pause</h2>
+        <p id="pauseText">Le motif attend.</p>
+        <button class="btn" id="resumeBtn">Reprendre</button>
+        <button class="btn ghost" id="restartBtn">Recommencer</button>
+        <button class="btn ghost" id="pauseMenuBtn">Menu</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="winOv">
+      <div class="card">
+        <div class="stars" id="starsBox"></div>
+        <h2 id="winTitle" class="gold">Tissage parfait&nbsp;!</h2>
+        <p id="winText"></p>
+        <button class="btn" id="nextBtn">Suivant</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="failOv">
+      <div class="card">
+        <h2 id="failTitle">Le motif se defait</h2>
+        <p id="failText"></p>
+        <button class="btn" id="retryBtn">Reprendre</button>
+        <button class="btn ghost" id="failMenuBtn">Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <footer id="footerHint">&nbsp;</footer>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ================= Modes & niveaux ================= */
+const ADV = [
+  {chapter:"Tracer", title:"Premier trait", counts:{2:1}, W:4, H:4, assist:1, hint:"Glissez sur les deux cases allumees."},
+  {chapter:"Tracer", title:"Deux traits", counts:{2:2}, W:4, H:4, assist:2, hint:"Chaque trait remplit deux cases."},
+  {chapter:"Tracer", title:"Petit motif", counts:{2:3}, W:5, H:4, assist:1, hint:"Terminez avec des traits de 2."},
+  {chapter:"Tracer", title:"Sans filet", counts:{2:4}, W:5, H:5, assist:0, hint:"Meme regle, plus d'exemple."},
+  {chapter:"Coins", title:"Ne pas isoler", counts:{2:5}, W:6, H:5, assist:1, hint:"Gardez toujours une sortie aux cases seules."},
+  {chapter:"Coins", title:"Poches", counts:{2:6}, W:6, H:6, assist:0, hint:"Les coins se lisent avant le centre."},
+  {chapter:"Coins", title:"Couloir", counts:{2:7}, W:7, H:6, assist:0, hint:"Un couloir se ferme dans le bon sens."},
+  {chapter:"Coins", title:"Test dominos", counts:{2:8}, W:7, H:7, assist:0, hint:"Tout se joue encore en traits de 2."},
+  {chapter:"Traits de 3", title:"Nouveau geste", counts:{3:1,2:2}, W:5, H:5, assist:1, hint:"Le trait de 3 existe maintenant."},
+  {chapter:"Traits de 3", title:"Deux longueurs", counts:{3:2,2:2}, W:6, H:5, assist:1, hint:"Utilisez les traits demandes."},
+  {chapter:"Traits de 3", title:"Choisir", counts:{3:2,2:3}, W:6, H:6, assist:0, hint:"Les traits courts gardent de la souplesse."},
+  {chapter:"Traits de 3", title:"Angles", counts:{3:3,2:3}, W:7, H:6, assist:0, hint:"Un trait de 3 peut tourner."},
+  {chapter:"Traits de 3", title:"Poches longues", counts:{3:4,2:3}, W:7, H:7, assist:0, hint:"Reperez les zones de trois cases."},
+  {chapter:"Traits de 3", title:"Test mixte", counts:{3:4,2:4}, W:8, H:7, assist:0, hint:"Deux tailles, aucun exemple."},
+  {chapter:"Retrait", title:"Reprendre", counts:{3:3,2:5}, W:8, H:7, assist:1, hint:"Touchez une piece posee pour la retirer."},
+  {chapter:"Retrait", title:"Rattraper", counts:{3:5,2:4}, W:8, H:8, assist:0, hint:"Une erreur se corrige, la serie non."},
+  {chapter:"Traits de 4", title:"Grand trait", counts:{4:1,3:2,2:2}, W:6, H:6, assist:1, hint:"Le trait de 4 entre en jeu."},
+  {chapter:"Traits de 4", title:"Grand angle", counts:{4:2,3:2,2:2}, W:7, H:6, assist:1, hint:"Quatre cases, un seul geste."},
+  {chapter:"Traits de 4", title:"Equilibre", counts:{4:2,3:3,2:3}, W:8, H:7, assist:0, hint:"Les grandes pieces structurent la forme."},
+  {chapter:"Traits de 4", title:"Reserve", counts:{4:3,3:3,2:3}, W:8, H:8, assist:0, hint:"Ne depensez pas les 2 trop vite."},
+  {chapter:"Melange", title:"Trois tailles", counts:{4:3,3:4,2:4}, W:9, H:8, assist:0, hint:"La vraie grammaire commence."},
+  {chapter:"Melange", title:"Branches", counts:{4:4,3:4,2:4}, W:9, H:9, assist:0, hint:"Les branches courtes appellent souvent des 2."},
+  {chapter:"Melange", title:"Boucles", counts:{4:4,3:5,2:4}, W:9, H:9, assist:0, hint:"Lisez les contours avant de tracer."},
+  {chapter:"Melange", title:"Densite", counts:{4:5,3:5,2:4}, W:10, H:9, assist:0, hint:"Les quotas guident la solution."},
+  {chapter:"Challenge", title:"Peu de 2", counts:{4:5,3:6,2:2}, W:10, H:9, assist:0, hint:"Les traits de 2 deviennent rares."},
+  {chapter:"Challenge", title:"Poches fines", counts:{4:6,3:5,2:3}, W:10, H:10, assist:0, hint:"Chaque petite poche compte."},
+  {chapter:"Challenge", title:"Longue forme", counts:{4:7,3:5,2:3}, W:10, H:11, assist:0, hint:"Avancez depuis les extremites."},
+  {chapter:"Challenge", title:"Grand mix", counts:{4:7,3:6,2:4}, W:10, H:11, assist:0, hint:"Tout est connu, plus rien n'est donne."},
+  {chapter:"Final", title:"Lecture", counts:{4:8,3:6,2:4}, W:11, H:11, assist:0, hint:"Le plateau entier est l'indice."},
+  {chapter:"Final", title:"Tesselle", counts:{4:8,3:7,2:5}, W:11, H:12, assist:0, hint:"Dernier test de la campagne V1."},
+];
+const EXP = [
+  {k:2, size:22, W:7, H:7, maxAvgFront:2.8},
+  {k:2, size:28, W:7, H:8, maxAvgFront:2.4},
+  {k:3, size:21, W:7, H:7, maxAvgFront:3.0},
+  {k:3, size:27, W:8, H:8, maxAvgFront:2.6},
+  {k:4, size:24, W:7, H:8, maxAvgFront:0},
+];
+const infParams = m => ({
+  sizes:[2,3,4],
+  size: Math.min(20 + m * 4, 52),
+  W: Math.min(7 + Math.floor(m / 2), 10),
+  H: Math.min(8 + Math.floor(m / 2), 11),
+});
+const BW = 360, BH = 410;
+const PAL = ["#E3A94C","#5B9BD1","#54BFAE","#D46A6A","#9B7EDE"];
+const NOTES = [392, 440, 523, 587, 659, 784, 880, 1046];
+const COMBO_MS = 3200, FEVER_AT = 4;
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const STORAGE_KEY = "tesselle.progress.v1";
+const defaultProgress = () => ({
+  advUnlocked: 1,
+  advStars: Array(ADV.length).fill(0),
+  expUnlocked: 1,
+  expStars: Array(EXP.length).fill(0),
+  bestInfRound: 0,
+  bestInfScore: 0,
+  totalWins: 0,
+  settings: { sound: true, motion: true }
+});
+let progress = loadProgress();
+
+const canvas = document.getElementById("board");
+const ctx = canvas.getContext("2d");
+let dpr = 1, scale = 1;
+
+/* ================= État ================= */
+let mode = "adv";            // adv | inf | exp
+let level = 0, infRound = 0;
+let sizes = [2], expK = 2;
+let quotas = null, usedBySize = null, levelHint = "", levelWitness = [];
+let region = new Set(), filled = new Set();
+let placed = [];             // {cells, color, t0, shimmer, fly}
+let expSolution = new Set(); // mode expert
+let expForced = [];          // placements forcés courants (expert)
+let hearts = 3, errors = 0, lifts = 0;
+let score = 0, chain = 0, bestChainLvl = 0, lastPlaceT = -1e9, lastActionT = 0;
+let totalStars = 0, runScore = 0;
+let drawPath = [], liftCand = null;
+let state = "menu";          // menu | play | winseq | flyoff | won | failed
+let flashBad = null, particles = [], floaters = [], shakeT = -1e9;
+let CELL = 44, OX = 0, OY = 0;
+const advCache = [], expCache = [];
+
+/* ================= PRNG & clés ================= */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const Kk = (c, r) => c + "," + r;
+const NB = [[1,0],[-1,0],[0,1],[0,-1]];
+const setKey = cells => cells.slice().sort().join("|");
+const adjacent = (a, b) => {
+  const [ac, ar] = a.split(",").map(Number);
+  const [bc, br] = b.split(",").map(Number);
+  return Math.abs(ac - bc) + Math.abs(ar - br) === 1;
+};
+
+/* ================= Moteur commun ================= */
+function pathsCovering(cKey, free, k){
+  if(k === 2){
+    const [c, r] = cKey.split(",").map(Number);
+    const out = [];
+    for(const [dc, dr] of NB){
+      const nk = Kk(c + dc, r + dr);
+      if(free.has(nk)) out.push([cKey, nk]);
+    }
+    return out;
+  }
+  const [c0, r0] = cKey.split(",").map(Number);
+  const ball = [];
+  for(const f of free){
+    const [c, r] = f.split(",").map(Number);
+    if(Math.abs(c - c0) + Math.abs(r - r0) <= k - 1) ball.push(f);
+  }
+  const ballSet = new Set(ball);
+  const found = new Map();
+  const path = [];
+  function dfs(){
+    if(path.length === k){
+      if(path.includes(cKey)){
+        const key = setKey(path);
+        if(!found.has(key)) found.set(key, path.slice());
+      }
+      return;
+    }
+    const last = path[path.length - 1];
+    const [c, r] = last.split(",").map(Number);
+    for(const [dc, dr] of NB){
+      const nk = Kk(c + dc, r + dr);
+      if(!ballSet.has(nk) || path.includes(nk)) continue;
+      path.push(nk); dfs(); path.pop();
+    }
+  }
+  for(const s of ball){ path.push(s); dfs(); path.pop(); }
+  return [...found.values()];
+}
+
+// une pose crée-t-elle une case orpheline ?
+function makesOrphan(set, free){
+  const S = new Set(set);
+  for(const s of set){
+    const [c, r] = s.split(",").map(Number);
+    for(const [dc, dr] of NB){
+      const v = Kk(c + dc, r + dr);
+      if(S.has(v) || !free.has(v)) continue;
+      const [vc, vr] = v.split(",").map(Number);
+      let n = 0;
+      for(const [ec, er] of NB){
+        const w = Kk(vc + ec, vr + er);
+        if(free.has(w) && !S.has(w)) n++;
+      }
+      if(n === 0) return true;
+    }
+  }
+  return false;
+}
+
+// composantes connexes des cases libres
+function components(free){
+  const seen = new Set(); const comps = [];
+  for(const s of free){
+    if(seen.has(s)) continue;
+    const comp = []; const q = [s]; seen.add(s);
+    while(q.length){
+      const u = q.pop(); comp.push(u);
+      const [c, r] = u.split(",").map(Number);
+      for(const [dc, dr] of NB){
+        const v = Kk(c + dc, r + dr);
+        if(free.has(v) && !seen.has(v)){ seen.add(v); q.push(v); }
+      }
+    }
+    comps.push(comp);
+  }
+  return comps;
+}
+
+// pavage exact d'une petite zone (≤ 16 cases) par des chemins des tailles permises
+function canTileSmall(cellsArr, szs){
+  let nodes = 0;
+  return rec(new Set(cellsArr));
+  function rec(free){
+    if(free.size === 0) return true;
+    if(++nodes > 6000) return true; // garde-fou : bénéfice du doute
+    const first = [...free].sort()[0];
+    for(const k of szs){
+      for(const p of pathsCovering(first, free, k)){
+        if(makesOrphan(p, free)) continue;
+        const f2 = new Set(free);
+        for(const c of p) f2.delete(c);
+        if(rec(f2)) return true;
+      }
+    }
+    return false;
+  }
+}
+
+function canTileSmallWithQuotas(cellsArr, counts){
+  let nodes = 0;
+  return rec(new Set(cellsArr), { ...counts });
+  function rec(free, left){
+    if(free.size === 0) return true;
+    if(++nodes > 8000) return true;
+    const first = [...free].sort()[0];
+    for(const k of countsToSizes(left)){
+      if((left[k] || 0) <= 0) continue;
+      for(const p of pathsCovering(first, free, k)){
+        if(makesOrphan(p, free)) continue;
+        const f2 = new Set(free);
+        for(const c of p) f2.delete(c);
+        const next = { ...left, [k]: left[k] - 1 };
+        if(rec(f2, next)) return true;
+      }
+    }
+    return false;
+  }
+}
+
+function randomPath(rnd, start, k, inBox, excl){
+  const path = [start];
+  while(path.length < k){
+    const [c, r] = path[path.length - 1].split(",").map(Number);
+    const opts = [];
+    for(const [dc, dr] of NB){
+      const nk = Kk(c + dc, r + dr);
+      if(inBox(nk) && !path.includes(nk) && !excl.has(nk)) opts.push(nk);
+    }
+    if(!opts.length) return null;
+    path.push(opts[Math.floor(rnd() * opts.length)]);
+  }
+  return path;
+}
+
+function countsToSizes(counts){
+  return Object.keys(counts).map(Number).filter(k => counts[k] > 0).sort((a, b) => a - b);
+}
+function countsToPieceList(counts){
+  const pieces = [];
+  for(const k of countsToSizes(counts)){
+    for(let i = 0; i < counts[k]; i++) pieces.push(k);
+  }
+  return pieces;
+}
+function countCells(counts){
+  return countsToPieceList(counts).reduce((sum, k) => sum + k, 0);
+}
+function quotaText(){
+  if(!quotas || !usedBySize) return "";
+  return countsToSizes(quotas).map(k => {
+    const left = quotas[k] - (usedBySize[k] || 0);
+    return left + "x" + k;
+  }).join("  ");
+}
+
+/* ---- Génération mode libre : union de chemins (complétable par construction) ---- */
+function genFreeRegion(seed, Q){
+  const rnd = mulberry32(seed);
+  const inBox = nk => { const [c, r] = nk.split(",").map(Number); return c >= 0 && c < Q.W && r >= 0 && r < Q.H; };
+  for(let attempt = 0; attempt < 60; attempt++){
+    const cells = new Set();
+    const s0 = Kk(1 + Math.floor(rnd() * (Q.W - 2)), 1 + Math.floor(rnd() * (Q.H - 2)));
+    const k0 = Q.sizes[Math.floor(rnd() * Q.sizes.length)];
+    const first = randomPath(rnd, s0, k0, inBox, cells);
+    if(!first) continue;
+    first.forEach(c => cells.add(c));
+    let guard = 0;
+    while(cells.size < Q.size && guard++ < 400){
+      const border = [];
+      for(const ck of cells){
+        const [c, r] = ck.split(",").map(Number);
+        for(const [dc, dr] of NB){
+          const nk = Kk(c + dc, r + dr);
+          if(inBox(nk) && !cells.has(nk)) border.push(nk);
+        }
+      }
+      if(!border.length) break;
+      const start = border[Math.floor(rnd() * border.length)];
+      const k = Q.sizes[Math.floor(rnd() * Q.sizes.length)];
+      const p = randomPath(rnd, start, k, inBox, cells);
+      if(!p) continue;
+      p.forEach(c => cells.add(c));
+    }
+    if(cells.size >= Q.size) return [...cells];
+  }
+  return null;
+}
+
+function genCountedRegion(seed, Q){
+  const rnd = mulberry32(seed);
+  const inBox = nk => { const [c, r] = nk.split(",").map(Number); return c >= 0 && c < Q.W && r >= 0 && r < Q.H; };
+  const orderBase = countsToPieceList(Q.counts).sort((a, b) => b - a);
+  for(let attempt = 0; attempt < 140; attempt++){
+    const cells = new Set();
+    const pieces = [];
+    const order = orderBase.slice();
+    for(let i = order.length - 1; i > 0; i--){
+      const j = Math.floor(rnd() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    const firstStart = Kk(Math.floor(Q.W / 2), Math.floor(Q.H / 2));
+    const first = randomPath(rnd, firstStart, order[0], inBox, cells);
+    if(!first) continue;
+    first.forEach(c => cells.add(c));
+    pieces.push(first);
+    let ok = true;
+    for(let i = 1; i < order.length; i++){
+      const border = [];
+      for(const ck of cells){
+        const [c, r] = ck.split(",").map(Number);
+        for(const [dc, dr] of NB){
+          const nk = Kk(c + dc, r + dr);
+          if(inBox(nk) && !cells.has(nk)) border.push(nk);
+        }
+      }
+      let piece = null;
+      for(let t = 0; t < 35 && !piece && border.length; t++){
+        const start = border[Math.floor(rnd() * border.length)];
+        piece = randomPath(rnd, start, order[i], inBox, cells);
+      }
+      if(!piece){ ok = false; break; }
+      piece.forEach(c => cells.add(c));
+      pieces.push(piece);
+    }
+    if(ok && cells.size === countCells(Q.counts)) return { cells:[...cells], pieces };
+  }
+  const fallback = genFreeRegion(seed, { ...Q, sizes:countsToSizes(Q.counts), size:countCells(Q.counts) });
+  return { cells:fallback || [], pieces:[] };
+}
+
+/* ---- Génération mode expert : cascade forcée, solution unique ---- */
+function solveForcedK(cellsArr, k){
+  const free = new Set(cellsArr);
+  const pieces = []; const fronts = [];
+  while(free.size > 0){
+    let pick = null, count = 0;
+    for(const c of free){
+      const pl = pathsCovering(c, free, k);
+      if(pl.length === 0) return null;
+      if(pl.length === 1){ count++; if(!pick) pick = pl[0]; }
+    }
+    if(!pick) return null;
+    fronts.push(count);
+    for(const c of pick) free.delete(c);
+    pieces.push(pick);
+  }
+  return { pieces, fronts };
+}
+function genExpert(seed, Q){
+  const rnd = mulberry32(seed);
+  const inBox = nk => { const [c, r] = nk.split(",").map(Number); return c >= 0 && c < Q.W && r >= 0 && r < Q.H; };
+  const cells = new Set();
+  const s0 = Kk(1 + Math.floor(rnd() * (Q.W - 2)), 1 + Math.floor(rnd() * (Q.H - 2)));
+  const first = randomPath(rnd, s0, Q.k, inBox, cells);
+  if(!first) return null;
+  first.forEach(c => cells.add(c));
+  while(cells.size < Q.size){
+    const border = [];
+    for(const ck of cells){
+      const [c, r] = ck.split(",").map(Number);
+      for(const [dc, dr] of NB){
+        const nk = Kk(c + dc, r + dr);
+        if(inBox(nk) && !cells.has(nk)) border.push(nk);
+      }
+    }
+    if(!border.length) return null;
+    let ok = false;
+    for(let t = 0; t < 10 && !ok; t++){
+      const start = border[Math.floor(rnd() * border.length)];
+      const p = randomPath(rnd, start, Q.k, inBox, cells);
+      if(!p) continue;
+      p.forEach(c => cells.add(c));
+      if(solveForcedK([...cells], Q.k)) ok = true;
+      else p.forEach(c => cells.delete(c));
+    }
+    if(!ok) return null;
+  }
+  const sol = solveForcedK([...cells], Q.k);
+  if(!sol) return null;
+  const avgF = sol.fronts.reduce((a, b) => a + b, 0) / sol.fronts.length;
+  if(Q.maxAvgFront && avgF > Q.maxAvgFront) return null;
+  return { cells: [...cells], sol };
+}
+function getExpert(idx){
+  if(expCache[idx]) return expCache[idx];
+  const Q = EXP[idx];
+  for(let s = 0; s < 4000; s++){
+    const l = genExpert(51000 + idx * 613 + s, Q);
+    if(l){ expCache[idx] = l; return l; }
+  }
+  for(let s = 0; s < 4000; s++){
+    const l = genExpert(95000 + idx * 613 + s, {...Q, maxAvgFront: 0});
+    if(l){ expCache[idx] = l; return l; }
+  }
+}
+
+/* ================= Audio ================= */
+let AC = null;
+function audio(){
+  if(!progress.settings.sound) return null;
+  if(!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  return AC;
+}
+function tone(freq, dur, type, vol, when = 0){
+  if(!progress.settings.sound) return;
+  try{
+    const ac = audio();
+    if(!ac) return;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime + when);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + when + dur);
+    o.connect(g).connect(ac.destination);
+    o.start(ac.currentTime + when); o.stop(ac.currentTime + when + dur + 0.02);
+  }catch(e){}
+}
+function whoosh(vol){
+  if(!progress.settings.sound) return;
+  try{
+    const ac = audio();
+    if(!ac) return;
+    const len = ac.sampleRate * 0.25;
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 1;
+    f.frequency.setValueAtTime(500, ac.currentTime);
+    f.frequency.exponentialRampToValueAtTime(2200, ac.currentTime + 0.22);
+    const g = ac.createGain(); g.gain.value = vol;
+    src.connect(f).connect(g).connect(ac.destination);
+    src.start();
+  }catch(e){}
+}
+const sDraw   = i => tone(560 + i * 110, 0.05, "sine", 0.09);
+const sCancel = () => tone(300, 0.07, "sine", 0.06);
+const sLift   = () => { tone(420, 0.08, "sine", 0.12); tone(280, 0.12, "sine", 0.1, 0.05); };
+const sPlace  = (cb, fever) => {
+  tone(140 + Math.min(cb, 8) * 10, 0.1, "sine", 0.3);
+  tone(NOTES[Math.min(cb, NOTES.length - 1)] * (fever ? 2 : 1), 0.16, "sine", 0.16);
+  tone(900, 0.02, "square", 0.08);
+};
+const sErr   = () => { tone(150, 0.22, "square", 0.1); tone(110, 0.22, "square", 0.08, 0.02); };
+const sWave  = i => tone(NOTES[Math.min(i, NOTES.length - 1)], 0.14, "sine", 0.13);
+const sChord = () => { tone(523,0.14,"sine",0.14); tone(659,0.14,"sine",0.14,0.1); tone(784,0.14,"sine",0.14,0.2); tone(1046,0.3,"sine",0.13,0.3); };
+
+/* ================= Rendu ================= */
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  scale = canvas.clientWidth / BW || 1;
+  canvas.width = Math.round(BW * scale * dpr);
+  canvas.height = Math.round(BH * scale * dpr);
+}
+window.addEventListener("resize", resize);
+
+function layout(){
+  let minC = 99, maxC = -1, minR = 99, maxR = -1;
+  for(const k of region){
+    const [c, r] = k.split(",").map(Number);
+    minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+    minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+  }
+  const w = maxC - minC + 1, h = maxR - minR + 1;
+  CELL = Math.min(Math.floor(330 / w), Math.floor(380 / h), 52);
+  OX = (BW - w * CELL) / 2 - minC * CELL;
+  OY = (BH - h * CELL) / 2 - minR * CELL;
+}
+const px = c => OX + c * CELL;
+const py = r => OY + r * CELL;
+
+function roundRect(x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawPiece(cells, color, opts = {}){
+  ctx.save();
+  if(opts.dx || opts.dy || opts.rot){
+    let cx = 0, cy = 0;
+    for(const k of cells){
+      const [c, r] = k.split(",").map(Number);
+      cx += px(c) + CELL / 2; cy += py(r) + CELL / 2;
+    }
+    cx /= cells.length; cy /= cells.length;
+    ctx.translate(cx + (opts.dx || 0), cy + (opts.dy || 0));
+    ctx.rotate(opts.rot || 0);
+    ctx.translate(-cx, -cy);
+  }
+  ctx.globalAlpha = opts.alpha != null ? opts.alpha : 1;
+  if(opts.dashed){
+    ctx.setLineDash([6, 5]);
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+    const inset = 5, rad = Math.min(9, CELL * 0.22);
+    for(const k of cells){
+      const [c, r] = k.split(",").map(Number);
+      roundRect(px(c) + inset, py(r) + inset, CELL - inset * 2, CELL - inset * 2, rad);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+  if(opts.glow){ ctx.shadowColor = color; ctx.shadowBlur = 20; }
+  else { ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 7; ctx.shadowOffsetY = 3; }
+  ctx.fillStyle = color;
+  const inset = 3.5, rad = Math.min(11, CELL * 0.26);
+  for(const k of cells){
+    const [c, r] = k.split(",").map(Number);
+    roundRect(px(c) + inset, py(r) + inset, CELL - inset * 2, CELL - inset * 2, rad);
+    ctx.fill();
+  }
+  ctx.shadowColor = "transparent";
+  for(let i = 0; i < cells.length; i++){
+    for(let j = i + 1; j < cells.length; j++){
+      if(!adjacent(cells[i], cells[j])) continue;
+      const [ac, ar] = cells[i].split(",").map(Number);
+      const [bc, br] = cells[j].split(",").map(Number);
+      if(ac === bc){
+        const y = Math.min(py(ar), py(br)) + CELL - inset - rad;
+        ctx.fillRect(px(ac) + inset, y, CELL - inset * 2, 2 * (inset + rad));
+      } else {
+        const x = Math.min(px(ac), px(bc)) + CELL - inset - rad;
+        ctx.fillRect(x, py(ar) + inset, 2 * (inset + rad), CELL - inset * 2);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+function render(now){
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  ctx.clearRect(0, 0, BW, BH);
+  if(region.size === 0){ requestAnimationFrame(render); return; }
+
+  const shAge = now - shakeT;
+  if(shAge < 130 && motionOn()){
+    const a = 3 * (1 - shAge / 130);
+    ctx.translate(Math.sin(shAge / 9) * a, Math.cos(shAge / 7) * a);
+  }
+
+  for(const k of region){
+    const [c, r] = k.split(",").map(Number);
+    ctx.fillStyle = "#2A3140";
+    roundRect(px(c) + 2.5, py(r) + 2.5, CELL - 5, CELL - 5, 7);
+    ctx.fill();
+  }
+
+  // assist expert : fantôme en pointillés d'une pièce forcée
+  if(mode === "exp" && state === "play" && drawPath.length === 0 && expForced.length){
+    const idle = now - lastActionT;
+    const show = placed.length === 0 || idle > 3500;
+    if(show){
+      const breathe = 0.45 + 0.3 * (0.5 + 0.5 * Math.sin(now / 400));
+      drawPiece(expForced[0], "#F2D16B", { dashed: true, alpha: breathe });
+    }
+  }
+  if(mode === "adv" && state === "play" && drawPath.length === 0 && levelWitness.length && ADV[level].assist > placed.length){
+    const ghost = levelWitness[placed.length];
+    if(ghost && ghost.every(c => !filled.has(c))){
+      const breathe = 0.45 + 0.3 * (0.5 + 0.5 * Math.sin(now / 400));
+      drawPiece(ghost, "#F2D16B", { dashed: true, alpha: breathe });
+    }
+  }
+
+  if(flashBad){
+    const q = (now - flashBad.t0) / 550;
+    if(q <= 1){
+      ctx.save();
+      ctx.globalAlpha = 0.55 * (1 - q);
+      ctx.fillStyle = "#D45A5A";
+      for(const k of flashBad.cells){
+        const [c, r] = k.split(",").map(Number);
+        roundRect(px(c) + 2.5, py(r) + 2.5, CELL - 5, CELL - 5, 7);
+        ctx.fill();
+      }
+      ctx.restore();
+    } else flashBad = null;
+  }
+
+  for(const p of placed){
+    const age = now - p.t0;
+    const opts = {};
+    if(age < 220 && motionOn()){ opts.alpha = Math.min(1, age / 90); opts.glow = true; }
+    if(p.shimmer && now - p.shimmer < 320) opts.glow = true;
+    if(p.fly){
+      const fa = (now - p.fly.t0) / 700;
+      if(fa > 0){
+        const e = Math.min(1, fa);
+        opts.dx = p.fly.vx * e * e * 520;
+        opts.dy = p.fly.vy * e * e * 520;
+        opts.rot = p.fly.rot * e;
+        opts.alpha = Math.max(0, 1 - e * 1.05);
+      }
+    }
+    if(!(opts.alpha <= 0)) drawPiece(p.cells, p.color, opts);
+  }
+
+  if(drawPath.length > 0){
+    drawPiece(drawPath, PAL[placed.length % PAL.length], { alpha: 0.5, glow: true });
+    const last = drawPath[drawPath.length - 1];
+    const [c, r] = last.split(",").map(Number);
+    ctx.save();
+    ctx.globalAlpha = 0.9; ctx.fillStyle = "#EDE7D8";
+    ctx.beginPath(); ctx.arc(px(c) + CELL / 2, py(r) + CELL / 2, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  particles = particles.filter(pt => now - pt.t0 < 320);
+  for(const pt of particles){
+    const q = (now - pt.t0) / 320;
+    ctx.save();
+    ctx.globalAlpha = (1 - q) * 0.55;
+    ctx.strokeStyle = pt.col;
+    ctx.lineWidth = 2.5 * (1 - q);
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 6 + q * 22, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  floaters = floaters.filter(f => now - f.t0 < 800);
+  for(const f of floaters){
+    const q = (now - f.t0) / 800;
+    ctx.save();
+    ctx.globalAlpha = 1 - q;
+    ctx.fillStyle = "#F2D16B";
+    ctx.font = "800 " + (15 + Math.min(f.n, 6) * 1.5) + "px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(f.txt || ("×" + f.n), f.x, f.y - q * 26);
+    ctx.restore();
+  }
+
+  // barre de combo
+  const elapsed = now - lastPlaceT;
+  const frac = chain > 0 ? Math.max(0, 1 - elapsed / COMBO_MS) : 0;
+  if(chain > 0 && frac === 0){ chain = 0; updateScore(); }
+  const fill = document.getElementById("comboFill");
+  fill.style.width = (frac * 100) + "%";
+  fill.classList.toggle("fever", chain >= FEVER_AT);
+  canvas.classList.toggle("fever", chain >= FEVER_AT && state === "play");
+
+  requestAnimationFrame(render);
+}
+
+/* ================= UI ================= */
+const $ = id => document.getElementById(id);
+const motionOn = () => progress.settings.motion && !REDUCED;
+
+function loadProgress(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const base = defaultProgress();
+    return {
+      ...base,
+      ...saved,
+      advStars: [...(saved?.advStars || []), ...base.advStars].slice(0, ADV.length),
+      expStars: [...(saved?.expStars || []), ...base.expStars].slice(0, EXP.length),
+      settings: { ...base.settings, ...(saved?.settings || {}) }
+    };
+  }catch(e){
+    return defaultProgress();
+  }
+}
+function saveProgress(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+function setAppPage(id){
+  for(const el of document.querySelectorAll(".app > .page")) el.classList.toggle("active", el.id === id);
+  if(id !== "gamePage") showOverlay("menuOv", false);
+  if(id === "homePage") renderHome();
+  if(id === "advPage") renderLevelGrid("adv");
+  if(id === "expertPage") renderLevelGrid("exp");
+  if(id === "statsPage") renderStats();
+  if(id === "settingsPage") renderSettings();
+}
+function setMenuScreen(id){
+  const page = {
+    homeScreen: "homePage",
+    advScreen: "advPage",
+    expertScreen: "expertPage",
+    statsScreen: "statsPage",
+    settingsScreen: "settingsPage"
+  }[id] || id;
+  setAppPage(page);
+}
+function openMenu(screen = "homeScreen"){
+  state = "menu";
+  showOverlay("pauseOv", false);
+  showOverlay("winOv", false);
+  showOverlay("failOv", false);
+  setMenuScreen(screen);
+  updateHUD();
+}
+function renderHome(){
+  const next = Math.min(progress.advUnlocked - 1, ADV.length - 1);
+  $("continueHint").textContent = "Aventure " + (next + 1);
+}
+function renderStats(){
+  const advStars = progress.advStars.reduce((a, b) => a + b, 0);
+  const expStars = progress.expStars.reduce((a, b) => a + b, 0);
+  $("statsText").innerHTML =
+    "Aventure : <b>" + advStars + "/" + (ADV.length * 3) + " etoiles</b><br>" +
+    "Expert : <b>" + expStars + "/" + (EXP.length * 3) + " etoiles</b><br>" +
+    "Victoires : <b>" + progress.totalWins + "</b><br>" +
+    "Infini : manche <b>" + progress.bestInfRound + "</b>, score <b>" + progress.bestInfScore + "</b>";
+}
+function renderSettings(){
+  $("soundToggle").classList.toggle("on", progress.settings.sound);
+  $("motionToggle").classList.toggle("on", progress.settings.motion);
+}
+function renderLevelGrid(kind){
+  const grid = kind === "adv" ? $("advGrid") : $("expertGrid");
+  const count = kind === "adv" ? ADV.length : EXP.length;
+  const unlocked = kind === "adv" ? progress.advUnlocked : progress.expUnlocked;
+  const stars = kind === "adv" ? progress.advStars : progress.expStars;
+  grid.innerHTML = "";
+  if(kind === "adv"){
+    const chapters = [];
+    for(let i = 0; i < ADV.length; i++){
+      let ch = chapters.find(c => c.name === ADV[i].chapter);
+      if(!ch){
+        ch = { name: ADV[i].chapter, start: i, items: [] };
+        chapters.push(ch);
+      }
+      ch.items.push(i);
+    }
+    for(const ch of chapters){
+      const band = document.createElement("section");
+      const done = ch.items.filter(i => stars[i] > 0).length;
+      const locked = ch.items.every(i => i >= unlocked);
+      band.className = "chapter-band" + (locked ? " locked" : "");
+      const intro = ADV[ch.items[0]].hint;
+      band.innerHTML =
+        "<div class='chapter-band-head'><div><h2>" + ch.name + "</h2><p>" + intro + "</p></div>" +
+        "<div class='chapter-progress'>" + done + "/" + ch.items.length + "</div></div>" +
+        "<div class='chapter-levels'></div>";
+      const levels = band.querySelector(".chapter-levels");
+      for(const i of ch.items) levels.appendChild(makeLevelButton(kind, i, unlocked, stars));
+      grid.appendChild(band);
+    }
+    return;
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "level-grid";
+  for(let i = 0; i < count; i++){
+    wrap.appendChild(makeLevelButton(kind, i, unlocked, stars));
+  }
+  grid.appendChild(wrap);
+}
+function makeLevelButton(kind, i, unlocked, stars){
+  const b = document.createElement("button");
+  b.className = "level-tile" + (i >= unlocked ? " locked" : "") + (kind === mode && i === level ? " current" : "");
+  b.innerHTML = (i + 1) + "<small>" + (stars[i] ? "*".repeat(stars[i]) : "&nbsp;") + "</small>";
+  b.disabled = i >= unlocked;
+  b.addEventListener("click", () => {
+    score = 0;
+    if(kind === "adv") loadAdv(i);
+    else loadExp(i);
+  });
+  return b;
+}
+
+function updateScore(){
+  $("scoreBox").innerHTML = "<b>" + score + "</b><span class='mult' id='multBox'>" +
+    (chain >= 2 ? "x" + Math.min(chain, 8) : "") + "</span>";
+}
+function updateHUD(){
+  $("caseLabel").textContent =
+    mode === "adv" ? ADV[level].chapter + " " + (level + 1) + "/" + ADV.length
+    : mode === "inf" ? "Infini - manche " + (infRound + 1)
+    : "Expert " + (level + 1) + "/" + EXP.length;
+  const heartsEl = $("hearts");
+  heartsEl.innerHTML = "";
+  for(let i = 0; i < 3; i++){
+    const d = document.createElement("div");
+    d.className = "heart" + (i < 3 - hearts ? " lost" : "");
+    heartsEl.appendChild(d);
+  }
+  updateScore();
+  const left = region.size - filled.size;
+  const smax = Math.max(...sizes);
+  $("footerHint").innerHTML =
+    state !== "play" ? "&nbsp;"
+    : mode === "exp" ? (placed.length === 0 ? "Une seule solution existe. Tracez la piece en <b>pointilles</b>." : "Pieces de <b>" + expK + "</b> - une seule solution.")
+    : mode === "adv" ? "<b>" + ADV[level].title + "</b> - " + quotaText() + "<br>" + levelHint
+    : "Pieces de <b>" + Math.min(...sizes) + (smax > Math.min(...sizes) ? " a " + smax : "") + " cases</b> - toucher une piece posee la retire.";
+}
+
+function startLevel(){
+  placed = []; filled = new Set();
+  hearts = 3; errors = 0; lifts = 0;
+  chain = 0; bestChainLvl = 0; lastPlaceT = -1e9;
+  flashBad = null; particles = []; floaters = []; drawPath = []; liftCand = null;
+  lastActionT = performance.now();
+  state = "play";
+  setAppPage("gamePage");
+  resize();
+  layout();
+  showOverlay("menuOv", false);
+  showOverlay("pauseOv", false);
+  showOverlay("winOv", false);
+  showOverlay("failOv", false);
+  updateHUD();
+}
+
+function loadAdv(idx){
+  mode = "adv"; level = idx;
+  sizes = countsToSizes(ADV[idx].counts);
+  quotas = { ...ADV[idx].counts };
+  usedBySize = {};
+  for(const k of sizes) usedBySize[k] = 0;
+  levelHint = ADV[idx].hint || "";
+  if(!advCache[idx]) advCache[idx] = genCountedRegion(71000 + idx * 831, ADV[idx]);
+  region = new Set(advCache[idx].cells);
+  levelWitness = advCache[idx].pieces || [];
+  startLevel();
+}
+function loadInf(round){
+  mode = "inf"; infRound = round;
+  quotas = null; usedBySize = null; levelHint = ""; levelWitness = [];
+  const Q = infParams(round);
+  sizes = Q.sizes;
+  region = new Set(genFreeRegion(Date.now() % 100000 + round * 977, Q) || genFreeRegion(1 + round, Q));
+  startLevel();
+}
+function loadExp(idx){
+  mode = "exp"; level = idx;
+  quotas = null; usedBySize = null; levelHint = ""; levelWitness = [];
+  expK = EXP[idx].k; sizes = [expK];
+  const l = getExpert(idx);
+  region = new Set(l.cells);
+  expSolution = new Set(l.sol.pieces.map(setKey));
+  startLevel();
+  computeExpForced();
+}
+function computeExpForced(){
+  const free = new Set([...region].filter(c => !filled.has(c)));
+  expForced = [];
+  for(const c of free){
+    const pl = pathsCovering(c, free, expK);
+    if(pl.length === 1) expForced.push(pl[0]);
+  }
+}
+
+function showOverlay(id, show){ $(id).classList.toggle("show", show); }
+function toMenu(){
+  if(state === "play"){
+    state = "pause";
+    $("pauseText").textContent = mode === "inf" ? "Manche " + (infRound + 1) : (mode === "adv" ? "Aventure " : "Expert ") + (level + 1);
+    showOverlay("pauseOv", true);
+    updateHUD();
+    return;
+  }
+  openMenu("homeScreen");
+}
+function resumeGame(){
+  state = "play";
+  showOverlay("pauseOv", false);
+  lastActionT = performance.now();
+  updateHUD();
+}
+function restartCurrent(){
+  score = mode === "inf" ? 0 : score;
+  if(mode === "inf") loadInf(infRound);
+  else if(mode === "adv") loadAdv(level);
+  else loadExp(level);
+}
+
+/* ================= Geste serpent + retrait ================= */
+function cellAt(ev){
+  const rect = canvas.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) / rect.width * BW;
+  const y = (ev.clientY - rect.top) / rect.height * BH;
+  return Kk(Math.floor((x - OX) / CELL), Math.floor((y - OY) / CELL));
+}
+canvas.addEventListener("pointerdown", ev => {
+  if(state !== "play") return;
+  audio();
+  lastActionT = performance.now();
+  canvas.setPointerCapture(ev.pointerId);
+  const k = cellAt(ev);
+  liftCand = null;
+  if(region.has(k) && !filled.has(k)){
+    drawPath = [k]; sDraw(0);
+  } else if(filled.has(k) && mode !== "exp"){
+    liftCand = k;
+  }
+});
+canvas.addEventListener("pointermove", ev => {
+  if(state !== "play" || drawPath.length === 0) return;
+  const k = cellAt(ev);
+  const last = drawPath[drawPath.length - 1];
+  if(k === last) return;
+  if(drawPath.length >= 2 && k === drawPath[drawPath.length - 2]){
+    drawPath.pop(); sCancel(); return;
+  }
+  if(drawPath.length >= Math.max(...sizes)) return;
+  if(region.has(k) && !filled.has(k) && !drawPath.includes(k) && adjacent(k, last)){
+    drawPath.push(k); sDraw(drawPath.length - 1);
+  }
+});
+canvas.addEventListener("pointerup", ev => {
+  if(state !== "play") return;
+  lastActionT = performance.now();
+  if(liftCand){
+    const k = cellAt(ev);
+    if(k === liftCand) liftPiece(k);
+    liftCand = null;
+    return;
+  }
+  if(drawPath.length === 0) return;
+  const path = drawPath; drawPath = [];
+  if(!sizes.includes(path.length)){ if(path.length > 1) sCancel(); return; }
+  attempt(path);
+});
+
+function liftPiece(cellKey){
+  const idx = placed.findIndex(p => p.cells.includes(cellKey));
+  if(idx < 0) return;
+  const p = placed[idx];
+  placed.splice(idx, 1);
+  for(const c of p.cells) filled.delete(c);
+  if(mode === "adv" && usedBySize) usedBySize[p.cells.length] = Math.max(0, (usedBySize[p.cells.length] || 0) - 1);
+  lifts++;
+  chain = 0;
+  score = Math.max(0, score - p.cells.length * 5);
+  sLift();
+  particles.push(centroidParticle(p.cells, "#ABA695"));
+  updateHUD();
+}
+function centroidParticle(cells, col){
+  let cx = 0, cy = 0;
+  for(const k of cells){
+    const [c, r] = k.split(",").map(Number);
+    cx += px(c) + CELL / 2; cy += py(r) + CELL / 2;
+  }
+  return { x: cx / cells.length, y: cy / cells.length, t0: performance.now(), col };
+}
+
+/* ================= Pose ================= */
+function attempt(path){
+  const now = performance.now();
+  const pt = centroidParticle(path, PAL[placed.length % PAL.length]);
+
+  let ok, failMsg = "";
+  if(mode === "adv" && quotas && (usedBySize[path.length] || 0) >= (quotas[path.length] || 0)){
+    ok = false;
+    failMsg = "quota epuise";
+  } else if(mode === "exp"){
+    ok = expSolution.has(setKey(path));
+    failMsg = "hors solution";
+  } else {
+    const free = new Set([...region].filter(c => !filled.has(c)));
+    if(makesOrphan(path, free)){ ok = false; failMsg = "case orpheline"; }
+    else {
+      const f2 = new Set(free);
+      for(const c of path) f2.delete(c);
+      ok = true;
+      let remainingCounts = null;
+      if(mode === "adv" && quotas && usedBySize){
+        remainingCounts = { ...quotas };
+        for(const k of Object.keys(usedBySize)) remainingCounts[k] = (remainingCounts[k] || 0) - usedBySize[k];
+        remainingCounts[path.length] = (remainingCounts[path.length] || 0) - 1;
+      }
+      for(const comp of components(f2)){
+        if(comp.length <= 16){
+          const canTile = remainingCounts
+            ? canTileSmallWithQuotas(comp, remainingCounts)
+            : canTileSmall(comp, sizes);
+          if(!canTile){ ok = false; failMsg = "zone coincee"; break; }
+        }
+      }
+    }
+  }
+
+  if(ok){
+    const fever = chain + 1 >= FEVER_AT;
+    chain = (now - lastPlaceT < COMBO_MS) ? chain + 1 : 1;
+    bestChainLvl = Math.max(bestChainLvl, chain);
+    lastPlaceT = now;
+    for(const k of path) filled.add(k);
+    placed.push({ cells: path.slice(), color: PAL[placed.length % PAL.length], t0: now });
+    if(mode === "adv" && usedBySize) usedBySize[path.length] = (usedBySize[path.length] || 0) + 1;
+    score += path.length * 10 * Math.min(Math.max(chain, 1), 8);
+    sPlace(chain - 1, fever);
+    shakeT = now;
+    particles.push(pt);
+    if(chain >= 2) floaters.push({ x: pt.x, y: pt.y - 8, t0: now, n: chain });
+    if(mode === "exp") computeExpForced();
+    updateHUD();
+    if(filled.size === region.size) winSequence();
+  } else {
+    errors++; hearts--;
+    chain = 0;
+    flashBad = { cells: path, t0: now };
+    floaters.push({ x: pt.x, y: pt.y - 8, t0: now, n: 0, txt: failMsg });
+    shakeT = now;
+    sErr();
+    if(hearts <= 0){
+      state = "failed";
+      $("failTitle").textContent = mode === "inf" ? "Fin de la serie" : "Le motif se defait";
+      $("failText").innerHTML = mode === "inf"
+        ? "Score de la serie : <b>" + score + "</b> (manche " + (infRound + 1) + ")."
+        : mode === "exp"
+          ? "Trois pieces hors solution. La piece en pointilles ne ment jamais&nbsp;: c'est la seule certitude du plateau."
+          : "Trois pieces fautives. Evitez d'isoler une case, et retirez une piece posee (un toucher) si la forme se coince.";
+      $("retryBtn").textContent = mode === "inf" ? "Nouvelle serie" : "Reprendre";
+      setTimeout(() => showOverlay("failOv", true), 500);
+    }
+    updateHUD();
+  }
+}
+
+/* ================= Victoire ================= */
+function pieceAdjacency(){
+  const adj = placed.map(() => []);
+  for(let i = 0; i < placed.length; i++){
+    for(let j = i + 1; j < placed.length; j++){
+      let touch = false;
+      for(const a of placed[i].cells){
+        for(const b of placed[j].cells){
+          if(adjacent(a, b)){ touch = true; break; }
+        }
+        if(touch) break;
+      }
+      if(touch){ adj[i].push(j); adj[j].push(i); }
+    }
+  }
+  return adj;
+}
+function winSequence(){
+  state = "winseq";
+  updateHUD();
+  const adj = pieceAdjacency();
+  const start = placed.length - 1;
+  const wave = new Array(placed.length).fill(-1);
+  wave[start] = 0;
+  const q = [start];
+  let maxW = 0;
+  while(q.length){
+    const u = q.shift();
+    for(const v of adj[u]){
+      if(wave[v] === -1){ wave[v] = wave[u] + 1; maxW = Math.max(maxW, wave[v]); q.push(v); }
+    }
+  }
+  const stepT = motionOn() ? 130 : 20;
+  placed.forEach((p, i) => setTimeout(() => { p.shimmer = performance.now(); }, 250 + wave[i] * stepT));
+  for(let w = 0; w <= maxW; w++) setTimeout(() => sWave(w), 250 + w * stepT);
+
+  const flyStart = 250 + (maxW + 1) * stepT + 300;
+  setTimeout(() => {
+    state = "flyoff";
+    const bx = BW / 2, by = BH / 2;
+    placed.forEach((p, i) => {
+      let cx = 0, cy = 0;
+      for(const k of p.cells){
+        const [c, r] = k.split(",").map(Number);
+        cx += px(c) + CELL / 2; cy += py(r) + CELL / 2;
+      }
+      cx /= p.cells.length; cy /= p.cells.length;
+      const dx = cx - bx, dy = cy - by - 60;
+      const L = Math.hypot(dx, dy) || 1;
+      setTimeout(() => {
+        p.fly = { t0: performance.now(), vx: dx / L, vy: dy / L - 0.55, rot: (Math.random() - 0.5) * 2.2 };
+        whoosh(0.07);
+      }, i * (motionOn() ? 55 : 10));
+    });
+  }, flyStart);
+
+  const total = flyStart + placed.length * (motionOn() ? 55 : 10) + 750;
+  setTimeout(() => {
+    state = "won";
+    sChord();
+    // étoiles : terminé / propre (0 erreur, 0 retrait) / série ≥ 60 % des pièces
+    const clean = errors === 0 && lifts === 0;
+    const streak = bestChainLvl >= Math.ceil(placed.length * 0.6);
+    const stars = 1 + (clean ? 1 : 0) + (streak ? 1 : 0);
+    progress.totalWins++;
+    if(mode === "adv"){
+      progress.advStars[level] = Math.max(progress.advStars[level], stars);
+      progress.advUnlocked = Math.max(progress.advUnlocked, Math.min(ADV.length, level + 2));
+    } else if(mode === "exp"){
+      progress.expStars[level] = Math.max(progress.expStars[level], stars);
+      progress.expUnlocked = Math.max(progress.expUnlocked, Math.min(EXP.length, level + 2));
+    } else {
+      progress.bestInfRound = Math.max(progress.bestInfRound, infRound + 1);
+      progress.bestInfScore = Math.max(progress.bestInfScore, score);
+    }
+    saveProgress();
+    $("starsBox").innerHTML = "*".repeat(stars) + "<span class='off'>" + "*".repeat(3 - stars) + "</span>";
+    $("winTitle").textContent = stars === 3 ? "Tissage parfait !" : "Forme remplie";
+    $("winTitle").classList.toggle("gold", stars === 3);
+    $("winText").innerHTML = "Score : <b>" + score + "</b>" +
+      (bestChainLvl >= 2 ? " - meilleure serie <b>x" + Math.min(bestChainLvl, 8) + "</b>" : "") +
+      (clean ? "" : " - " + errors + " erreur" + (errors > 1 ? "s" : "") + (lifts ? ", " + lifts + " retrait" + (lifts > 1 ? "s" : "") : ""));
+    $("nextBtn").textContent =
+      mode === "inf" ? "Manche suivante"
+      : mode === "adv" ? (level + 1 < ADV.length ? "Niveau suivant" : "Menu")
+      : (level + 1 < EXP.length ? "Niveau suivant" : "Menu");
+    showOverlay("winOv", true);
+  }, total);
+}
+
+/* ================= Navigation ================= */
+$("continueBtn").addEventListener("click", () => { audio(); score = 0; loadAdv(Math.min(progress.advUnlocked - 1, ADV.length - 1)); });
+$("mapBtn").addEventListener("click", () => setMenuScreen("advScreen"));
+$("expertMapBtn").addEventListener("click", () => setMenuScreen("expertScreen"));
+$("infBtn").addEventListener("click", () => { audio(); score = 0; loadInf(0); });
+$("statsBtn").addEventListener("click", () => setMenuScreen("statsScreen"));
+$("settingsBtn").addEventListener("click", () => setMenuScreen("settingsScreen"));
+$("advBackBtn").addEventListener("click", () => setMenuScreen("homeScreen"));
+$("expertBackBtn").addEventListener("click", () => setMenuScreen("homeScreen"));
+$("statsBackBtn").addEventListener("click", () => setMenuScreen("homeScreen"));
+$("settingsBackBtn").addEventListener("click", () => setMenuScreen("homeScreen"));
+$("soundToggle").addEventListener("click", () => {
+  progress.settings.sound = !progress.settings.sound;
+  saveProgress();
+  renderSettings();
+});
+$("motionToggle").addEventListener("click", () => {
+  progress.settings.motion = !progress.settings.motion;
+  saveProgress();
+  renderSettings();
+});
+$("menuBtn").addEventListener("click", toMenu);
+$("resumeBtn").addEventListener("click", resumeGame);
+$("restartBtn").addEventListener("click", restartCurrent);
+$("pauseMenuBtn").addEventListener("click", () => openMenu("homeScreen"));
+$("failMenuBtn").addEventListener("click", () => openMenu("homeScreen"));
+$("retryBtn").addEventListener("click", () => {
+  showOverlay("failOv", false);
+  if(mode === "inf"){ score = 0; loadInf(0); }
+  else if(mode === "adv") loadAdv(level);
+  else loadExp(level);
+});
+$("nextBtn").addEventListener("click", () => {
+  showOverlay("winOv", false);
+  if(mode === "inf") loadInf(infRound + 1);
+  else if(mode === "adv"){ if(level + 1 < ADV.length) loadAdv(level + 1); else openMenu("homeScreen"); }
+  else { if(level + 1 < EXP.length) loadExp(level + 1); else openMenu("homeScreen"); }
+});
+
+/* ================= Démarrage ================= */
+// pré-génération en tâche de fond
+(function pregen(i){
+  if(i >= ADV.length + EXP.length) return;
+  setTimeout(() => {
+    if(i < ADV.length){ if(!advCache[i]) advCache[i] = genCountedRegion(71000 + i * 831, ADV[i]); }
+    else getExpert(i - ADV.length);
+    pregen(i + 1);
+  }, 90);
+})(0);
+region = new Set(["0,0"]); // placeholder avant le premier chargement
+loadAdv(0);
+openMenu("homeScreen");
+resize();
+requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>
